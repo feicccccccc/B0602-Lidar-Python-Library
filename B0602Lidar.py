@@ -3,7 +3,6 @@
 import serial
 import time
 import numpy as np
-import matplotlib.pyplot as plt
 
 # Store 1 frame of data
 
@@ -122,16 +121,16 @@ class B0602Lidar:
                 if self.debug: print("(r/s) =", rpm)
                 zero_offset_bit = self.ser.read(2)
                 if self.debug: print("Zero offset bit:", format(zero_offset_bit[0], '02x'), format(zero_offset_bit[1], '02x'))
-                zero_offest = self.bytes_to_int(zero_offset_bit) / 100
+                zero_offest = self.bytes_to_int(zero_offset_bit)
                 if zero_offest >= 2 ** 15:
                     zero_offest -= 2 ** 16
-                if self.debug: print("Zero offset(degree) =", zero_offest)
+                if self.debug: print("Zero offset(0.01degree) =", zero_offest)
                 if self.debug: print("Data Point in packet:",int((data_length - 5)/ 3))
 
                 angle_bit = self.ser.read(2)
                 if self.debug: print("Angle bit:", format(angle_bit[0], '02x'), format(angle_bit[1], '02x'))
-                angle = self.bytes_to_int(angle_bit) / 100 + zero_offest
-                if self.debug: print("Angle(degree)", angle)
+                start_angle = self.bytes_to_int(angle_bit) + zero_offest
+                if self.debug: print("Angle(0.01degree)", start_angle)
 
                 for i in range(0, int((data_length - 5)/ 3)):
                     if self.debug: print("Loop count:", i)
@@ -142,13 +141,15 @@ class B0602Lidar:
                     dist_bit = self.ser.read(2)
                     if self.debug: print("Dist bit:", format(dist_bit[0], '02x'), format(dist_bit[1], '02x'))
                     dist = self.bytes_to_int(dist_bit) * 0.25  # in mm
+                    angle = start_angle + 22500 * i / (int((data_length - 5)/ 3)+1)
                     if self.debug: print("Distance (mm):", dist)
-                    self.data.append([signalStrength, dist])
+                    if self.debug: print("angle (0.01degree):", angle)
+                    self.data.append([angle/100, dist])
                 end = time.time()
                 if self.debug: print("Time take for 1 packet", (end - cur) * 1000)
                 if self.debug: print("Data package:", self.data)
-                self.single_scan[angle] = self.data
-                self.single_scan['r/s'] = self.rpm
+                self.single_scan[start_angle] = self.data
+                self.single_scan['r/s'] = rpm
                 #print("Data:",self.single_scan)
                 crc = self.ser.read(2)
                 if self.debug: print("CRC check:",crc)
