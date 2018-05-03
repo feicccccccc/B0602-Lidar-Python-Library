@@ -19,5 +19,5 @@ while 1:
     print(lidar.run())
 ```
 run() method return A frame represent by a dictionary <br />
-- First key is angle , value is 20 data point [Signal Strength , distance in mm] in that scan
+- First key is angle , value is 20 data point [angle , distance in mm] in that scan
 - Second key is 'r/s' , value is r/s
