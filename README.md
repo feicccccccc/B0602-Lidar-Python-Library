@@ -14,7 +14,7 @@ Example:
 ```
 from B0602Lidar import B0602Lidar
 
-lidar = B0602Lidar()
+lidar = B0602Lidar(port='/dev/ttyUSB0')
 while 1:
     print(lidar.run())
 ```
