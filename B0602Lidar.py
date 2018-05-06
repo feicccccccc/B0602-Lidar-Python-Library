@@ -29,7 +29,8 @@ class B0602Lidar:
     zero_offset = 0
     rpm = 0
 
-    def __init__(self, port='/dev/cu.SLAB_USBtoUART', baudrate=115200):
+    #def __init__(self, port='/dev/cu.SLAB_USBtoUART', baudrate=115200):
+    def __init__(self, port='/dev/ttyUSB0', baudrate=115200):
         '''Initilize B0602Lidar object for communicating with the sensor.
         Parameters
         ----------
@@ -42,9 +43,9 @@ class B0602Lidar:
         print("Port:",port)
         self.port = port
         self.baudrate = baudrate
-        self.ser = self.connect()
+        self.ser = self._connect()
 
-    def connect(self):
+    def _connect(self):
         '''Connects to the serial port with the name `self.port`.'''
         ser = serial.Serial()
         ser.baudrate = 115200
@@ -58,7 +59,7 @@ class B0602Lidar:
             exit(0)
         return ser
 
-    def bytes_to_int(self,input_bytes):  # change byte to int
+    def _bytes_to_int(self,input_bytes):  # change byte to int
         isinstance(input_bytes, bytes) or exit(99)
         if (len(input_bytes) == 0): return 0
         # (input_bytes[0] < 0x80) or exit (98)
@@ -85,7 +86,7 @@ class B0602Lidar:
                 temp = []
                 temp = self.ser.read(2)
                 if self.debug: print("Length bit:", format(temp[0], '02x'), format(temp[1], '02x'))
-                length = self.bytes_to_int(temp)
+                length = self._bytes_to_int(temp)
                 if self.debug: print("Length of packet:", length)
                 addr = self.ser.read()
                 if addr == b'\x00':
@@ -110,7 +111,7 @@ class B0602Lidar:
                     else:
                         print("cmd not match: cmd =", format(cmd, '02x'))
                 data_length_byte = self.ser.read(2)
-                data_length = self.bytes_to_int(data_length_byte)
+                data_length = self._bytes_to_int(data_length_byte)
                 if self.debug: print("Expected data length =", data_length)
                 if length - data_length == 8:
                     if self.debug: print("bit length confirmed")
@@ -121,18 +122,19 @@ class B0602Lidar:
                 if self.debug: print("(r/s) =", rpm)
                 zero_offset_bit = self.ser.read(2)
                 if self.debug: print("Zero offset bit:", format(zero_offset_bit[0], '02x'), format(zero_offset_bit[1], '02x'))
-                zero_offest = self.bytes_to_int(zero_offset_bit)
+                zero_offest = self._bytes_to_int(zero_offset_bit)
                 if zero_offest >= 2 ** 15:
                     zero_offest -= 2 ** 16
                 if self.debug: print("Zero offset(0.01degree) =", zero_offest)
                 if self.debug: print("Data Point in packet:",int((data_length - 5)/ 3))
+                data_pts = int((data_length - 5)/ 3)
 
                 angle_bit = self.ser.read(2)
                 if self.debug: print("Angle bit:", format(angle_bit[0], '02x'), format(angle_bit[1], '02x'))
-                start_angle = self.bytes_to_int(angle_bit) + zero_offest
+                start_angle = self._bytes_to_int(angle_bit)/100 + zero_offest
                 if self.debug: print("Angle(0.01degree)", start_angle)
 
-                for i in range(0, int((data_length - 5)/ 3)):
+                for i in range(1, data_pts+1):
                     if self.debug: print("Loop count:", i)
                     signalStrength_bit = self.ser.read()
                     if self.debug: print("signal Strength bit:", format(signalStrength_bit[0], '02x'))
@@ -140,11 +142,11 @@ class B0602Lidar:
                     if self.debug: print("signal Strength:", format(signalStrength))
                     dist_bit = self.ser.read(2)
                     if self.debug: print("Dist bit:", format(dist_bit[0], '02x'), format(dist_bit[1], '02x'))
-                    dist = self.bytes_to_int(dist_bit) * 0.25  # in mm
-                    angle = start_angle + 22500 * i / (int((data_length - 5)/ 3)+1)
+                    dist = self._bytes_to_int(dist_bit) * 0.25  # in mm
+                    angle = start_angle + (22.5 * (i-1) / data_pts)
                     if self.debug: print("Distance (mm):", dist)
                     if self.debug: print("angle (0.01degree):", angle)
-                    self.data.append([angle/100, dist])
+                    self.data.append([angle, dist])
                 end = time.time()
                 if self.debug: print("Time take for 1 packet", (end - cur) * 1000)
                 if self.debug: print("Data package:", self.data)
