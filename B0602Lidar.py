@@ -8,29 +8,8 @@ import numpy as np
 
 class B0602Lidar:
 
-    ser = None
-    port = ''
-    baudrate = 115200
-    angle = 0
-    signalStrength = 0
-    dist = 0
-    debug = False
-    single_scan = {}
-
-    # realted bit
-
-    flag = []
-    data = []
-    length = 0
-    data_length = 0
-    cmd = ''
-    cyc = 0B11000000000000101
-
-    zero_offset = 0
-    rpm = 0
-
-    #def __init__(self, port='/dev/cu.SLAB_USBtoUART', baudrate=115200):
-    def __init__(self, port='/dev/ttyUSB0', baudrate=115200):
+    def __init__(self, port='/dev/cu.SLAB_USBtoUART', baudrate=115200):
+    #def __init__(self, port='/dev/ttyUSB0', baudrate=115200):
         '''Initilize B0602Lidar object for communicating with the sensor.
         Parameters
         ----------
@@ -41,6 +20,29 @@ class B0602Lidar:
         '''
         print("Initializing the B0602 Lidar")
         print("Port:",port)
+        self.ser = None
+        self.port = ''
+        self.running = True
+
+        self.baudrate = 115200
+        self.angle = 0
+        self.signalStrength = 0
+        self.dist = 0
+        self.debug = False
+        self.single_scan = {}
+
+        # realted bit
+
+        self.flag = []
+        self.data = []
+        self.length = 0
+        self.data_length = 0
+        self.cmd = ''
+        self.cyc = 0B11000000000000101
+
+        self.zero_offset = 0
+        self.rpm = 0
+
         self.port = port
         self.baudrate = baudrate
         self.ser = self._connect()
@@ -71,6 +73,13 @@ class B0602Lidar:
 
         return i1
 
+    def run_thread(self):
+        return self.single_scan
+
+    def update(self):
+        while self.running:
+            self.run()
+
     def run(self):
 
         self.data.clear()
@@ -79,6 +88,7 @@ class B0602Lidar:
         while 1:
             c = self.ser.read()
             if self.debug: print("  ",c)
+            # wait till the start of the frame
             if c == b'\xAA':  # flag
                 cur = time.time()
                 if self.debug: print("Current time tick:", cur)
@@ -132,6 +142,8 @@ class B0602Lidar:
                 angle_bit = self.ser.read(2)
                 if self.debug: print("Angle bit:", format(angle_bit[0], '02x'), format(angle_bit[1], '02x'))
                 start_angle = self._bytes_to_int(angle_bit)/100 + zero_offest
+                if start_angle > 360:
+                    start_angle = start_angle - 360
                 if self.debug: print("Angle(0.01degree)", start_angle)
 
                 for i in range(1, data_pts+1):
@@ -153,6 +165,7 @@ class B0602Lidar:
                 self.single_scan[start_angle] = self.data
                 self.single_scan['r/s'] = rpm
                 #print("Data:",self.single_scan)
+                #TODO: Add CRC check
                 crc = self.ser.read(2)
                 if self.debug: print("CRC check:",crc)
                 return self.single_scan

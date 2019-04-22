@@ -38,8 +38,8 @@ def crc16(data: bytes):
     return np.uint16(crc)
 
 if __name__ == "__main__":
-    #ser = init('/dev/cu.SLAB_USBtoUART')
-   # while 1:
-      #  c = ser.read()
-      #  print(format(ord(c), '02x'))
+    ser = init('/dev/cu.SLAB_USBtoUART')
+    while 1:
+        c = ser.read()
+        print(format(ord(c), '02x'))
     print(format(crc16(B''),'02X'))
