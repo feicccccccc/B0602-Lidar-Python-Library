@@ -2,6 +2,8 @@
 A simple Python library for low cost B0602 lidar
 Feel free to have a try 😄
 
+![example](https://github.com/feicccccccc/B0602-Lidar-Python-Library/blob/master/example2.jpeg?raw=true)
+
 To use the library, you need the following library:
 - PySerial
 
